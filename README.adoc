@@ -24,6 +24,8 @@ This project is just a playground for a _WebSocket Server with Kotlin/Javalin_
 
   * *nothing*
 
-== Roadmap
+== Links
 
-  * *none*
+  * link:https://javalin.io/tutorials/maven-setup[Javalin: Maven setup]
+  * link:https://javalin.io/tutorials/websocket-example-kotlin[Javalin: websocket example with kotlin]
+
