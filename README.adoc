@@ -12,13 +12,18 @@ This project is just a playground for a _WebSocket Server with Kotlin/Javalin_
 
 
 == Technical information
-  * The release versions are based on link:http://semver.org[Semantic Versioning 2.0.0].
+  * The release versions are based on link:http://semver.org[Semantic Visioning 2.0.0].
   * The latest release require `Kotlin` and `Java 8` (or newer) and is build with link:https://maven.apache.org[Maven] (version `3.3.x`).
 
 == Current Features
 
   * Start Server via `MainWs`
-    ** Do GET request on http://localhost:7000
+    ** Do GET request on `http://localhost:7070`
+    ** Do WebSocket connection to `ws://localhost:7070/ws`
+  * Build with Maven
+    ** Run `mvn package`
+    ** Start with `java -jar target/pg-websocket-0.1.0-SNAPSHOT-jar-with-dependencies.jar`
+
 
 == New and Noteworthy
 
@@ -28,4 +33,5 @@ This project is just a playground for a _WebSocket Server with Kotlin/Javalin_
 
   * link:https://javalin.io/tutorials/maven-setup[Javalin: Maven setup]
   * link:https://javalin.io/tutorials/websocket-example-kotlin[Javalin: websocket example with kotlin]
+  * link:https://kotlinlang.org/docs/reference/using-maven.html[Kotlin: Using Maven]
 

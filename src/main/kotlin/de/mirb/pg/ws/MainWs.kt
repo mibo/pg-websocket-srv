@@ -19,6 +19,8 @@ fun main(args: Array<String>) {
       ws.onMessage { session, message ->
         LOG.info("OnMessage (session.open={}): {}", session.isOpen, message)
         session.remote.sendString("Server received message: " + message)
+        session.remote.flush()
+        session.close()
       }
     }
   }.start()
