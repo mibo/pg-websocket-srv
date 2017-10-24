@@ -53,5 +53,11 @@
       <artifactId>kotlin-stdlib-jre8</artifactId>
       <version>${version.kotlin}</version>
     </dependency>
+    <dependency>
+      <groupId>io.kotlintest</groupId>
+      <artifactId>kotlintest</artifactId>
+      <version>LATEST</version>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 </project>
