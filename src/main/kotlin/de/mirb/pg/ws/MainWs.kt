@@ -4,24 +4,36 @@ import io.javalin.Javalin
 import org.slf4j.LoggerFactory
 
 fun main(args: Array<String>) {
-  val LOG = LoggerFactory.getLogger("de.mirb.pg.ws.MainWs")
+  val ms = MainWs()
+  ms.start()
+}
 
-  Javalin.create().apply {
-    port(7070)
-    enableStaticFiles("/public")
-    ws("/ws") { ws ->
-      ws.onConnect { session ->
-        LOG.info("OnConnect")
+class MainWs {
+  private val LOG = LoggerFactory.getLogger(this.javaClass.name)
+
+  fun start() {
+    Javalin.create().apply {
+      port(7070)
+      enableStaticFiles("/public")
+      ws("/ws") { ws ->
+        ws.onConnect { session ->
+          LOG.info("OnConnect -> remote={}", session.remoteAddress)
+        }
+        ws.onClose { session, status, message ->
+          LOG.info("OnClose (remote={}; status={}; message={})", session.remoteAddress, status, message)
+        }
+        ws.onMessage { session, message ->
+          LOG.info("OnMessage (session.open={}): {}", session.isOpen, message)
+          session.remote.sendString("Server received message: " + message)
+          session.remote.flush()
+          if("disconnect" == message.toLowerCase()) {
+            session.remote.sendString(
+                "Server received 'disconnect' command -> close session from remote: " + session.remoteAddress)
+            session.remote.flush()
+            session.close()
+          }
+        }
       }
-      ws.onClose { session, status, message ->
-        LOG.info("OnClose (status={}; message={})", status, message)
-      }
-      ws.onMessage { session, message ->
-        LOG.info("OnMessage (session.open={}): {}", session.isOpen, message)
-        session.remote.sendString("Server received message: " + message)
-        session.remote.flush()
-        session.close()
-      }
-    }
-  }.start()
+    }.start()
+  }
 }
