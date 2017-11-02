@@ -8,9 +8,9 @@
     </encoder>
   </appender>
 
-  <logger name="de.mirb" level="trace" />
+  <logger name="de.mirb" level="TRACE" />
 
-  <root level="warn">
+  <root level="TRACE">
     <appender-ref ref="STDOUT"/>
   </root>
 </configuration>
