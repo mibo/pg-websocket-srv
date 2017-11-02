@@ -1,86 +1,72 @@
 package de.mirb.pg.socks
 
+import de.mirb.pg.util.ContentHelper
 import org.slf4j.LoggerFactory
 import java.io.IOException
-import java.net.InetSocketAddress
 import java.net.Socket
 import java.nio.ByteBuffer
 import java.nio.channels.Channels
-import java.nio.channels.SelectionKey
-import java.nio.channels.Selector
-import java.nio.channels.SocketChannel
+import java.nio.channels.ReadableByteChannel
+import java.nio.channels.WritableByteChannel
+import java.nio.charset.Charset
+import java.nio.charset.StandardCharsets
 
-class SocketClient {
+class SocketClient(host: String, port: Int) {
   private val LOG = LoggerFactory.getLogger(this.javaClass.name)
+  private val inChannel: ReadableByteChannel
+  private val outChannel: WritableByteChannel
+  private val socket = Socket(host, port)
 
-  fun sendTo(host: String, port: Int, content: String): ByteBuffer? {
-    return sendToOld(host, port, ByteBuffer.wrap(content.toByteArray()))
+  init {
+    LOG.trace("Connected to '{}:{}'.", host, port)
+
+    inChannel = Channels.newChannel(socket.getInputStream())
+    outChannel = Channels.newChannel(socket.getOutputStream())
   }
 
-  fun sendTo(host: String, port: Int, content: ByteBuffer): ByteBuffer {
-    try {
-      val socket = SocketChannel.open()
-      socket.configureBlocking(false)
-      val selector = Selector.open()
-      val key = socket.register(selector, SelectionKey.OP_CONNECT, this)
-      val sa = InetSocketAddress(host, port)
-      socket.connect(sa)
-      socket.finishConnect()
-      LOG.trace("Connected to '{}:{}'.", host, port)
-      socket.write(content)
-      LOG.trace("Send {} bytes of data", content.limit())
-
-      val read = ByteBuffer.allocate(1024)
-      var receivedBytesCount = socket.read(read)
-      LOG.trace("Received {} bytes of data", receivedBytesCount)
-      while (receivedBytesCount >= 0) {
-        // TODO: handle read more then buffer size
-        receivedBytesCount = socket.read(read)
-      }
-      read.flip()
-      LOG.trace("Received content: {}", readToString(read))
-      return read
-    } catch (e: IOException) {
-      e.printStackTrace()
-      LOG.error("Exception occurred: " + e.message, e)
-      return ByteBuffer.allocate(0)
-    }
+  fun send(content: String, charset: Charset = StandardCharsets.UTF_8): String {
+    val byteContent = content.toByteArray(charset)
+    val response = send(ByteBuffer.wrap(byteContent))
+    return ContentHelper.toStream(response).asString(charset)
   }
 
-  fun sendToOld(host: String, port: Int, content: ByteBuffer): ByteBuffer? {
+  fun send(content: ByteBuffer): ByteBuffer {
     try {
-      val socket = Socket(host, port)
-//      val sa = InetSocketAddress(host, port)
-//      socket.connect(sa)
-      LOG.trace("Connected to '{}:{}'.", host, port)
-      val inChannel = Channels.newChannel(socket.getInputStream())
-      val outChannel = Channels.newChannel(socket.getOutputStream())
       LOG.trace("Send {} bytes of data", content.limit())
       outChannel.write(content)
 
       val read = ByteBuffer.allocate(1024)
       var receivedBytesCount = inChannel.read(read)
-      LOG.trace("Received {} bytes of data", receivedBytesCount)
-      while (receivedBytesCount >= 0) {
-        // handle read more then buffer size
-        LOG.trace("Wait for EOF...")
+      if(receivedBytesCount == 0) {
+        // do one re-read after a short sleep
+        LOG.trace("Re-read...")
+        Thread.sleep(100)
         receivedBytesCount = inChannel.read(read)
       }
+      LOG.trace("Received {} bytes of data", receivedBytesCount)
+
+      when {
+        receivedBytesCount < 0 -> // EOF
+          LOG.trace("Received EOF. Closing socket.")
+        receivedBytesCount == 0 -> // no data
+          LOG.trace("Received no data. Closing socket.")
+        else ->
+          LOG.trace("Received content: {}", ContentHelper.toStream(read).asString())
+      }
       read.flip()
-      LOG.trace("Received content: {}", readToString(read))
-      socket.close()
       return read
     } catch (e: IOException) {
       e.printStackTrace()
       LOG.error("Exception occurred: " + e.message, e)
+      close()
       return ByteBuffer.allocate(0)
     }
   }
 
-  fun readToString(buffer: ByteBuffer): String {
-    val tmpBuffer = buffer.duplicate()
-    val tmp: ByteArray = kotlin.ByteArray(tmpBuffer.limit())
-    tmpBuffer.get(tmp)
-    return String(tmp)
+  fun close() {
+    LOG.info("Close channels and socket.")
+    inChannel.close()
+    outChannel.close()
+    socket.close()
   }
 }

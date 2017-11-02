@@ -38,7 +38,12 @@ import java.util.Random
 object ContentHelper {
 
   class Stream constructor(content: ByteBuffer) {
-    val data = content.duplicate()
+    private val data = content.duplicate()
+    init {
+      if(data.position() > 0) {
+        data.flip()
+      }
+    }
 
     constructor(data: ByteArray) : this(ByteBuffer.wrap(data))
 
@@ -56,8 +61,8 @@ object ContentHelper {
     }
 
     @JvmOverloads
-    fun asString(charsetName: String = "UTF-8"): String {
-      return String(asArray(), Charset.forName(charsetName))
+    fun asString(charset: Charset = StandardCharsets.UTF_8): String {
+      return String(asArray(), charset)
     }
 
     @Throws(IOException::class)

@@ -3,7 +3,7 @@ package de.mirb.pg.socks
 import org.slf4j.LoggerFactory
 import java.net.ServerSocket
 
-class SocketServer(val port: Int) {
+class SocketServer(private val port: Int) {
   private val LOG = LoggerFactory.getLogger(this.javaClass.name)
   var runServer = true
 
@@ -13,7 +13,7 @@ class SocketServer(val port: Int) {
   }
 
   fun startForward(forwardHost: String, forwardPort: Int) {
-    val handler = SocketForwardHandler("localhost", 19382)
+    val handler = SocketForwardHandler(forwardHost, forwardPort)
     start(handler)
   }
 
