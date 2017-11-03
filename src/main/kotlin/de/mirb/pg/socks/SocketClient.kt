@@ -11,7 +11,8 @@ import java.nio.channels.WritableByteChannel
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
 
-class SocketClient(host: String, port: Int) {
+class SocketClient(private val host: String, private val port: Int) {
+  private val BUFFER_CAP = 1024 * 64
   private val LOG = LoggerFactory.getLogger(this.javaClass.name)
   private val inChannel: ReadableByteChannel
   private val outChannel: WritableByteChannel
@@ -22,6 +23,10 @@ class SocketClient(host: String, port: Int) {
 
     inChannel = Channels.newChannel(socket.getInputStream())
     outChannel = Channels.newChannel(socket.getOutputStream())
+  }
+
+  fun connection(): String {
+    return host + ":" + port
   }
 
   fun send(content: String, charset: Charset = StandardCharsets.UTF_8): String {
@@ -35,11 +40,13 @@ class SocketClient(host: String, port: Int) {
       LOG.trace("Send {} bytes of data", content.limit())
       outChannel.write(content)
 
-      val read = ByteBuffer.allocate(1024)
+      LOG.debug("Wait (blocking) for response (from {}:{})...", host, port)
+
+      val read = ByteBuffer.allocate(BUFFER_CAP)
       var receivedBytesCount = inChannel.read(read)
       if(receivedBytesCount == 0) {
         // do one re-read after a short sleep
-        LOG.trace("Re-read...")
+        LOG.trace("Re-read (from {}:{})...", host, port)
         Thread.sleep(100)
         receivedBytesCount = inChannel.read(read)
       }
