@@ -20,7 +20,7 @@ fun main(args: Array<String>) {
   } else {
     val port = getPort(args, "19381")
     val host = getHost(args, "localhost")
-    val client = SocketClient(host, port)
+    val client = SocketChannelClient(host, port, false)
     client.send("Some content")
     client.send("More content")
     client.close()

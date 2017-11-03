@@ -24,7 +24,7 @@ class SocketForwardHandler(
     val outChannel = Channels.newChannel(socket.getOutputStream())
     run = true
 
-    val client = SocketClient(host, port)
+    val client = SocketChannelClient(host, port, false)
     LOG.trace("Forward client created for '{}'...", client.connection())
 
     var emptyCounter = TimeUnit.SECONDS.toMillis(timeoutSeconds) / sleepInMs
