@@ -38,4 +38,6 @@ This project is just a playground for a _WebSocket Server with Kotlin/Javalin_
   * link:https://javalin.io/tutorials/maven-setup[Javalin: Maven setup]
   * link:https://javalin.io/tutorials/websocket-example-kotlin[Javalin: websocket example with kotlin]
   * link:https://kotlinlang.org/docs/reference/using-maven.html[Kotlin: Using Maven]
-
+  * link:https://tools.ietf.org/html/rfc6455.html[WebSocket `RFC 6455`]
+  ** link:https://tools.ietf.org/html/rfc6455.html#section-4[WS: Opening Handshake]
+  ** link:https://tools.ietf.org/html/rfc6455.html#section-5.2[WS: 5.2 Base Framing Protocol]
