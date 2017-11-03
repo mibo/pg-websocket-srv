@@ -18,17 +18,20 @@ class SocketForwardHandler(
   private var run = true
 
   override fun start(socket: Socket) {
-    LOG.info("Connection accepted on port {}. Start forwarding to {}:{}.", socket.port, host, port)
+    val localConnection = socket.inetAddress.hostName + ":" + socket.port
+    LOG.info("Connection accepted on '{}'. Start forwarding to {}:{}.", localConnection, host, port)
     val inChannel = Channels.newChannel(socket.getInputStream())
     val outChannel = Channels.newChannel(socket.getOutputStream())
     run = true
 
-    val client = SocketClient(host, port)
+    val client = SocketChannelClient(host, port, false)
+    LOG.trace("Forward client created for '{}'...", client.connection())
 
     var emptyCounter = TimeUnit.SECONDS.toMillis(timeoutSeconds) / sleepInMs
     val inBuffer = ByteBuffer.allocate(1024)
     LOG.debug("Wait for input data (run={})...", run)
     while(run) {
+      LOG.debug("Wait (blocking) for input data (on {})...", localConnection)
       val amount = inChannel.read(inBuffer)
       if(amount == -1) {
         // EOF
@@ -36,6 +39,7 @@ class SocketForwardHandler(
         run = false
       } else if(amount == 0) {
         if(!daemonMode && emptyCounter-- <= 0L) {
+          LOG.debug("Server timeout reached. Set run='false'")
           run = false
           continue
         }
@@ -45,14 +49,15 @@ class SocketForwardHandler(
         LOG.trace("Received '{}' bytes of data", amount)
         inBuffer.flip()
         val stream = ContentHelper.toStream(inBuffer)
-        LOG.trace("Received: '{}'", stream.asString())
+        LOG.trace("Received: '{}'; start forward to {}", stream.asString(), client.connection())
         val response = client.send(inBuffer)
-        LOG.trace("Forwarded: '{}'", stream.asString())
+        LOG.trace("Successful forwarded: '{}' (to {})", stream.asString(), client.connection())
         val responseStream = ContentHelper.toStream(response)
-        LOG.trace("Got response (from: {}:{}): {}", host, port, responseStream.asString())
-        LOG.trace("Write response back for socket {}:{}", socket.inetAddress.hostName, socket.port)
+        LOG.trace("Got response (from: {}): {}", client.connection(), responseStream.asString())
+        LOG.trace("Write response (from {}) back to forward connection ({})", localConnection, client.connection())
         outChannel.write(response)
         inBuffer.clear()
+        LOG.trace("Successful wrote response back for connection {}", client.connection())
       }
     }
 

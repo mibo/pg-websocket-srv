@@ -2,10 +2,14 @@ package de.mirb.pg.socks
 
 import org.slf4j.LoggerFactory
 import java.net.ServerSocket
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
+import java.util.concurrent.ThreadPoolExecutor
 
 class SocketServer(private val port: Int) {
   private val LOG = LoggerFactory.getLogger(this.javaClass.name)
   var runServer = true
+  val executorService = Executors.newCachedThreadPool()
 
   fun startBounce() {
     val handler = SocketBounceHandler()
@@ -23,8 +27,10 @@ class SocketServer(private val port: Int) {
     while(runServer) {
       LOG.info("Waiting for connection on port {} (handler={}).", port, handler.javaClass.name)
       val socket = serverSocket.accept()
-      LOG.info("Connection accepted on port {} and proceed with handler.", port)
-      handler.start(socket)
+      executorService.submit({
+        LOG.info("Connection accepted on port {} and proceed with handler.", port)
+        handler.start(socket)
+      })
     }
 
   }
