@@ -72,6 +72,11 @@
   <!-- library dependencies -->
   <dependencies>
     <dependency>
+      <groupId>com.typesafe.akka</groupId>
+      <artifactId>akka-http_2.11</artifactId>
+      <version>10.0.10</version>
+    </dependency>
+    <dependency>
       <groupId>io.javalin</groupId>
       <artifactId>javalin</artifactId>
       <version>${version.javalin}</version>

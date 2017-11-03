@@ -38,4 +38,7 @@ This project is just a playground for a _WebSocket Server with Kotlin/Javalin_
   * link:https://javalin.io/tutorials/maven-setup[Javalin: Maven setup]
   * link:https://javalin.io/tutorials/websocket-example-kotlin[Javalin: websocket example with kotlin]
   * link:https://kotlinlang.org/docs/reference/using-maven.html[Kotlin: Using Maven]
-
+  * Akka HTTP (WebSocket related)
+  ** link:https://doc.akka.io/docs/akka-http/current/java/http/server-side/websocket-support.html[Java/Scala Server sample]
+  ** link:https://doc.akka.io/docs/akka/2.4.2/scala/http/routing-dsl/websocket-support.html[Scala Sample]
+  ** link:https://blog.scalac.io/2015/07/30/websockets-server-with-akka-http.html[Blog: Websockets Server with akka-http]
