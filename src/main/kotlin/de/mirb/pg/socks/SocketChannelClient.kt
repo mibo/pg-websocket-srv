@@ -27,6 +27,10 @@ class SocketChannelClient(private val host: String, private val port: Int, priva
     return host + ":" + port
   }
 
+  fun isClosed(): Boolean {
+    return !socket.isOpen
+  }
+
   override fun send(content: ByteBuffer): ByteBuffer {
     try {
       while(!socket.finishConnect()){

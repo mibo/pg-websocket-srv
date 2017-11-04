@@ -1,5 +1,6 @@
 package de.mirb.pg.ws
 
+import de.mirb.pg.socks.SocketChannelClient
 import de.mirb.pg.util.ContentHelper
 import io.undertow.Handlers
 import io.undertow.Undertow
@@ -7,6 +8,7 @@ import io.undertow.util.Headers
 import io.undertow.websockets.core.*
 import org.slf4j.LoggerFactory
 import java.nio.ByteBuffer
+import java.util.*
 
 fun main(args: Array<String>) {
   val server = MainUndertow()
@@ -34,13 +36,24 @@ class MainUndertow {
       channel.receiveSetter.set(object: AbstractReceiveListener() {
         override fun onFullBinaryMessage(channel: WebSocketChannel?, message: BufferedBinaryMessage?) {
           log.trace("Received binary message.")
-          // bounce
-          if(message?.data?.resource?.size == 1) {
-            val stream = ContentHelper.toStream(message.data.resource[0])
-            log.trace("Received binary content='{}'.", stream.asString())
+          val inBuffer = ByteBuffer.allocate(1024*64)
+          message?.data?.resource?.forEach { inBuffer.put(it) }
+          inBuffer.flip()
+          val stream = ContentHelper.toStream(inBuffer)
+          val client = grantForwardSocket()
+          log.trace("Received binary content='{}'.", stream.asString())
+          log.trace("Received: '{}'; start forward to {}", stream.asString(), client.connection())
+          val response = client.send(inBuffer)
+          log.trace("Successful forwarded: '{}' (to {})", stream.asString(), client.connection())
+          val responseStream = ContentHelper.toStream(response)
+          log.trace("Got response (from: {}): {}", client.connection(), responseStream.asString())
+//          log.trace("Write response from forward connection ({}) back.", client.connection())
+          //
+          channel?.peerConnections?.forEach {
+            log.trace("Write response from forward connection ({}) back.", client.connection())
+            WebSockets.sendBinary(response, it, null, 2000)
+//            WebSockets.sendBinaryBlocking(response, it)
           }
-          val data = ByteBuffer.wrap("BOUNCE".toByteArray())
-          channel?.peerConnections?.forEach { WebSockets.sendBinary(data, it, null) }
         }
         override fun onFullTextMessage(channel: WebSocketChannel?, message: BufferedTextMessage?) {
           val messageData = message?.data
@@ -64,5 +77,15 @@ class MainUndertow {
             .addPrefixPath("/ws", wsHandler))
         .build()
     server.start()
+  }
+
+  // TODO: change double ctor usage
+//  private var client: SocketChannelClient = SocketChannelClient("localhost", 35672, false)
+  private var client: SocketChannelClient? = null
+  private fun grantForwardSocket(): SocketChannelClient {
+    if(client?.isClosed() != false) {
+      client = SocketChannelClient("localhost", 35672, false)
+    }
+    return client ?: SocketChannelClient("localhost", 35672, false)
   }
 }
