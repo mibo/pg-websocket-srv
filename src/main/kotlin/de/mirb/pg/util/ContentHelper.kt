@@ -102,6 +102,10 @@ object ContentHelper {
     }
   }
 
+  fun asString(buffer: ByteBuffer, charset: Charset = StandardCharsets.UTF_8): String {
+    return ContentHelper.toStream(buffer).asString(charset)
+  }
+
   @Throws(IOException::class)
   fun toStream(buffer: ByteBuffer): Stream {
     return Stream(buffer)
