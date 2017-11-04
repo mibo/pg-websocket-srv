@@ -35,7 +35,14 @@ This project is just a playground for a _WebSocket Server with Kotlin/Javalin_
 
 == Links
 
-  * link:https://javalin.io/tutorials/maven-setup[Javalin: Maven setup]
-  * link:https://javalin.io/tutorials/websocket-example-kotlin[Javalin: websocket example with kotlin]
-  * link:https://kotlinlang.org/docs/reference/using-maven.html[Kotlin: Using Maven]
-
+  * Kotlin links
+  ** link:https://kotlinlang.org/docs/reference/using-maven.html[Kotlin: Using Maven]
+  * Javalin links
+  ** link:https://javalin.io/tutorials/maven-setup[Javalin: Maven setup]
+  ** link:https://javalin.io/tutorials/websocket-example-kotlin[Javalin: websocket example with kotlin]
+  * Undertow links
+  ** link:http://undertow.io/[undertow.io Homepage]
+  ** link:https://github.com/undertow-io/undertow[undertow.io GitHub]
+  ** link:http://undertow.io/undertow-docs/undertow-docs-1.4.0/index.html#websockets[Undertow: Websockets]
+  ** link:https://github.com/undertow-io/undertow/blob/master/examples/src/main/java/io/undertow/examples/websockets/WebSocketServer.java[WS Basic Sample @GitHub]
+  ** link:https://github.com/undertow-io/undertow/blob/master/examples/src/main/java/io/undertow/examples/chat/ChatServer.java[WS Chat Sample @GitHub]

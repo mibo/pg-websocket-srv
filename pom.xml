@@ -13,6 +13,7 @@
     <version.kotlin>1.1.51</version.kotlin>
     <version.jetty>9.4.7.v20170914</version.jetty>
     <version.javalin>0.5.4</version.javalin>
+    <version.undertow>1.4.20.Final</version.undertow>
     <version.logback-classic>1.2.3</version.logback-classic>
     <main.class>de.mirb.pg.ws.MainWsKt</main.class>
   </properties>
@@ -75,6 +76,11 @@
       <groupId>io.javalin</groupId>
       <artifactId>javalin</artifactId>
       <version>${version.javalin}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.undertow</groupId>
+      <artifactId>undertow-core</artifactId>
+      <version>${version.undertow}</version>
     </dependency>
     <dependency>
       <groupId>org.eclipse.jetty.websocket</groupId>
