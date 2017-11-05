@@ -1,10 +1,9 @@
 package de.mirb.pg.socks
 
 import org.slf4j.LoggerFactory
-import java.net.ServerSocket
-import java.util.concurrent.ExecutorService
+import java.net.InetSocketAddress
+import java.nio.channels.ServerSocketChannel
 import java.util.concurrent.Executors
-import java.util.concurrent.ThreadPoolExecutor
 
 class SocketServer(private val port: Int) {
   private val LOG = LoggerFactory.getLogger(this.javaClass.name)
@@ -17,12 +16,14 @@ class SocketServer(private val port: Int) {
   }
 
   fun startForward(forwardHost: String, forwardPort: Int) {
-    val handler = SocketForwardHandler(forwardHost, forwardPort)
+    val handler = SocketForwardHandler(forwardHost, forwardPort, true, -1)
     start(handler)
   }
 
   private fun start(handler: SocketHandler) {
-    val serverSocket = ServerSocket(port)
+    val serverSocket = ServerSocketChannel.open()
+    serverSocket.configureBlocking(true)
+    serverSocket.bind(InetSocketAddress("localhost", port))
 
     while(runServer) {
       LOG.info("Waiting for connection on port {} (handler={}).", port, handler.javaClass.name)

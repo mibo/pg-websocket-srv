@@ -3,14 +3,9 @@ package de.mirb.pg.socks
 import de.mirb.pg.util.ContentHelper
 import org.slf4j.LoggerFactory
 import java.io.IOException
-import java.net.InetAddress
 import java.net.InetSocketAddress
-import java.net.Socket
 import java.nio.ByteBuffer
-import java.nio.channels.Channels
-import java.nio.channels.ReadableByteChannel
 import java.nio.channels.SocketChannel
-import java.nio.channels.WritableByteChannel
 
 class SocketChannelClient(private val host: String, private val port: Int, private val blocking: Boolean = true): SocketClient {
   private val BUFFER_CAP = 1024 * 64

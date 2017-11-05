@@ -5,7 +5,6 @@ import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 import java.util.*
-import kotlin.experimental.and
 import kotlin.experimental.xor
 
 class WebSocketHandler {
@@ -44,14 +43,21 @@ class WebSocketHandler {
     // TODO: implement mask
     // TODO: support for payload > 124
     val response = ByteBuffer.allocate(content.remaining() + 4)
-    if(binary) {
-      response.put(2)
-    } else {
-      response.put(1)
+    val firstByte = BitSet(7)
+    // TODO implement fragmentation
+    // set Fin: True
+    firstByte.set(7)
+    //
+    if(binary) { // binary opcode
+      firstByte.set(1)
+    } else { // text opcode
+      firstByte.set(0)
     }
+    response.put(firstByte.toByteArray())
+    //
     if(content.limit() < 124) {
-      val len = content.limit().toByte()-128
-      response.put(len.toByte())
+      val len = content.limit().toByte()
+      response.put(len)
     } else {
       // TODO: do correct payload length calculation
     }
@@ -62,11 +68,10 @@ class WebSocketHandler {
   }
 
   fun unwrap(content: ByteBuffer): WebSocketPayload {
-    val finOpCode = content[0]
+    val finOpCode = content[0].toBitSet()
     // TODO: fix this opcode handling
-    val isText = finOpCode and 0x01
-    val isBinary = finOpCode and 0x02
-    val binary = isBinary > 0 && isText.toInt() == 0
+    val isText = finOpCode[0]
+    val isBinary = finOpCode[1]
     val payloadLen = extractPayloadLength(content)
     // TODO: fix extended payload len / masking key start
     if(payloadLen.mask) {
@@ -79,12 +84,12 @@ class WebSocketHandler {
       val maskedPayload = ByteArray(payloadLen.length)
       content.position(endIndex)
       content.get(maskedPayload, 0, payloadLen.length)
-      return WebSocketPayload(binary, ByteBuffer.wrap(applyMask(maskingKey, maskedPayload)))
+      return WebSocketPayload(isBinary, ByteBuffer.wrap(applyMask(maskingKey, maskedPayload)))
     } else {
       val payload = ByteArray(payloadLen.length)
       content.position(payloadLen.nextPos)
       content.get(payload, 0, payloadLen.length)
-      return WebSocketPayload(binary, ByteBuffer.wrap(payload))
+      return WebSocketPayload(isBinary, ByteBuffer.wrap(payload))
     }
   }
 
@@ -115,12 +120,11 @@ class WebSocketHandler {
   private fun extractPayloadLength(content: ByteBuffer): PayloadInfo {
     val firstByte = content[1]
     // TODO: fix extended payload len / masking key start
-    var len = firstByte.toPositiveInt()
-    var mask = false
+    var len = firstByte.toInt()
+    val mask = firstByte.toBitSet()[7]
     var nextPos = 2
-    if(len > 127) {
-      mask = true
-      len -= 128
+    if(mask) {
+      len += 128
     }
     if(len == 126) {
       nextPos = 4
@@ -182,9 +186,19 @@ class WebSocketHandler {
     return ByteBuffer.wrap(HTTP_400_BAD_REQUEST_STATUS.toByteArray())
   }
 
-  fun Byte.toPositiveInt(): Int {
-    return this.toInt() + 128
+  /**
+   * 0 1 ... 126 127 ... -128 -127 ... -2 -1
+   * This directly corresponds to the following binary representation:
+   * 00000000 00000001 ...x x ... 10000000 10000001 ... 11111110 11111111
+   */
+//  fun Byte.toPositiveInt(): Int {
+//    return this.toInt() + 128
+//  }
+
+  fun Byte.toBitSet(): BitSet {
+    return BitSet.valueOf(ByteArray(1){this})
   }
+
 
   class PayloadInfo(val mask: Boolean, val length: Int, val nextPos: Int)
 

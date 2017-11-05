@@ -2,9 +2,8 @@ package de.mirb.pg.socks
 
 import de.mirb.pg.util.ContentHelper
 import org.slf4j.LoggerFactory
-import java.net.Socket
 import java.nio.ByteBuffer
-import java.nio.channels.Channels
+import java.nio.channels.SocketChannel
 import java.util.concurrent.TimeUnit
 
 class SocketBounceHandler(private val timeoutSeconds: Long = 10) : SocketHandler {
@@ -13,17 +12,23 @@ class SocketBounceHandler(private val timeoutSeconds: Long = 10) : SocketHandler
   private val daemonMode: Boolean = timeoutSeconds < 0
   private var run = true
 
-  override fun start(socket: Socket) {
-    LOG.info("Connection accepted on port {}", socket.port)
-    val inChannel = Channels.newChannel(socket.getInputStream())
-    val outChannel = Channels.newChannel(socket.getOutputStream())
+//  init {
+//    socket.configureBlocking(blocking)
+//    socket.connect(InetSocketAddress(host, port))
+//    LOG.trace("Connected to '{}:{}' (with blocking={};).", host, port, blocking)
+//  }
+
+  override fun start(socket: SocketChannel) {
+    LOG.info("Connection accepted on port {}", socket.remoteAddress)
+//    val inChannel = Channels.newChannel(socket.getInputStream())
+//    val outChannel = Channels.newChannel(socket.getOutputStream())
 
     run = true
     var emptyCounter = TimeUnit.SECONDS.toMillis(timeoutSeconds) / sleepInMs
     val inBuffer = ByteBuffer.allocate(1024)
     LOG.debug("Wait for input data (run={})...", run)
     while(run) {
-      val amount = inChannel.read(inBuffer)
+      val amount = socket.read(inBuffer)
       if(amount == -1) {
         // EOF
         LOG.trace("Received EOF.")
@@ -40,7 +45,7 @@ class SocketBounceHandler(private val timeoutSeconds: Long = 10) : SocketHandler
         inBuffer.flip()
         val stream = ContentHelper.toStream(inBuffer)
         LOG.trace("Received: '{}'", stream.asString())
-        val bounced = outChannel.write(inBuffer)
+        val bounced = socket.write(inBuffer)
         LOG.trace("Bounced '{}' bytes of data", bounced)
         inBuffer.clear()
       }

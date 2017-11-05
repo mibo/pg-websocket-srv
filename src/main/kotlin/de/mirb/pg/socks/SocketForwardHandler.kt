@@ -2,15 +2,9 @@ package de.mirb.pg.socks
 
 import de.mirb.pg.util.ContentHelper
 import org.slf4j.LoggerFactory
-import java.net.Socket
 import java.nio.ByteBuffer
-import java.nio.channels.Channels
-import java.nio.charset.StandardCharsets
-import java.security.MessageDigest
-import java.util.*
+import java.nio.channels.SocketChannel
 import java.util.concurrent.TimeUnit
-import javax.xml.bind.DatatypeConverter
-import javax.xml.crypto.dsig.DigestMethod
 
 class SocketForwardHandler(
     private val host: String,
@@ -24,11 +18,14 @@ class SocketForwardHandler(
   private var run = true
   private val wsHandler = if(webSocketSupportEnabled) { WebSocketHandler() } else { null }
 
-  override fun start(socket: Socket) {
-    val localConnection = socket.inetAddress.hostName + ":" + socket.port
-    LOG.info("Connection accepted on '{}'. Start forwarding to {}:{}.", localConnection, host, port)
-    val inChannel = Channels.newChannel(socket.getInputStream())
-    val outChannel = Channels.newChannel(socket.getOutputStream())
+  override fun start(socket: SocketChannel) {
+    val localConnection = socket.localAddress
+    val remoteConnection = socket.remoteAddress
+//    socket.configureBlocking(false)
+    LOG.info("Connection (blocking={}) accepted from '{}' on '{}'. Start forwarding to {}:{}.",
+            socket.isBlocking, remoteConnection, localConnection, host, port)
+//    val inChannel = Channels.newChannel(socket.getInputStream())
+//    val outChannel = Channels.newChannel(socket.getOutputStream())
     run = true
 
     val client = SocketChannelClient(host, port, false)
@@ -38,8 +35,8 @@ class SocketForwardHandler(
     val inBuffer = ByteBuffer.allocate(1024)
     LOG.debug("Wait for input data (run={})...", run)
     while(run) {
-      LOG.debug("Wait (blocking) for input data (on {})...", localConnection)
-      val amount = inChannel.read(inBuffer)
+      LOG.debug("Wait (blocking={}) for input data (on {})...", socket.isBlocking, localConnection)
+      val amount = socket.read(inBuffer)
       if(amount == -1) {
         // EOF
         LOG.trace("Received EOF.")
@@ -50,7 +47,7 @@ class SocketForwardHandler(
           run = false
           continue
         }
-        LOG.trace("Waiting for data (daemon={}, counter={}, sleep={})...", daemonMode, emptyCounter, sleepInMs)
+//        LOG.trace("Waiting for data (daemon={}, counter={}, sleep={})...", daemonMode, emptyCounter, sleepInMs)
         Thread.sleep(sleepInMs)
       } else {
         LOG.trace("Received '{}' bytes of data", amount)
@@ -65,7 +62,8 @@ class SocketForwardHandler(
             response = wsHandler.wrap(inContent.binary, fwdResponse)
             LOG.trace("Successful forwarded: '{}' (to {})", ContentHelper.asString(inContent.content), client.connection())
             LOG.trace("Got response (from: {}): {}", client.connection(), ContentHelper.asString(fwdResponse))
-            LOG.trace("Wrap response and write (from {}) back to forward connection ({})", localConnection, client.connection())
+            LOG.trace("Wrapped response (content='{}' from forward connection {}) and write back to connection ({})",
+                    ContentHelper.asString(response), client.connection(), localConnection)
           } else if(wsHandler.isWebSocketRequest(stream)) {
             LOG.trace("Received web socket upgrade request '{}'", localConnection)
             response = wsHandler.createWebSocketResponse(stream)
@@ -81,15 +79,18 @@ class SocketForwardHandler(
           LOG.trace("Got response (from: {}): {}", client.connection(), responseStream.asString())
           LOG.trace("Write response (from {}) back to forward connection ({})", localConnection, client.connection())
         }
-        outChannel.write(response)
+        socket.write(response)
         inBuffer.clear()
-        LOG.trace("Successful wrote response back for connection {}", client.connection())
+        // flush?
+//        socket.getOutputStream().flush()
+        //
+        LOG.trace("Successful wrote response back to {} from forward connection {}", remoteConnection, client.connection())
       }
     }
 
     LOG.info("Close channels/client/socket for forward handler")
-    inChannel.close()
-    outChannel.close()
+//    inChannel.close()
+//    outChannel.close()
     socket.close()
     client.close()
     wsHandler?.close()

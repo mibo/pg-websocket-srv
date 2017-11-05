@@ -41,3 +41,5 @@ This project is just a playground for a _WebSocket Server with Kotlin/Javalin_
   * link:https://tools.ietf.org/html/rfc6455.html[WebSocket `RFC 6455`]
   ** link:https://tools.ietf.org/html/rfc6455.html#section-4[WS: Opening Handshake]
   ** link:https://tools.ietf.org/html/rfc6455.html#section-5.2[WS: 5.2 Base Framing Protocol]
+  * Java Byte/Bit links
+  ** link:https://stackoverflow.com/questions/22452609/converting-0xff-gives-me-1-signed-vs-unsigned[Stackoverflow]
