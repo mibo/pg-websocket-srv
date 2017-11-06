@@ -22,6 +22,7 @@ class SocketForwardHandler(
     val localConnection = socket.localAddress
     val remoteConnection = socket.remoteAddress
 //    socket.configureBlocking(false)
+//    socket.setOption(StandardSocketOptions.TCP_NODELAY, false)
     LOG.info("Connection (blocking={}) accepted from '{}' on '{}'. Start forwarding to {}:{}.",
             socket.isBlocking, remoteConnection, localConnection, host, port)
 //    val inChannel = Channels.newChannel(socket.getInputStream())
@@ -54,7 +55,7 @@ class SocketForwardHandler(
         inBuffer.flip()
         val stream = ContentHelper.toStream(inBuffer)
         LOG.trace("Received: '{}'; start forward to {}", stream.asString(), client.connection())
-        val response: ByteBuffer
+        var response: ByteBuffer? = null
         if(wsHandler != null) {
           if(wsHandler.isOpen()) {
             val inContent = wsHandler.unwrap(inBuffer)
@@ -69,10 +70,9 @@ class SocketForwardHandler(
             response = wsHandler.createWebSocketResponse(stream)
             LOG.trace("Successful wrote ws upgrade response back for connection {} with response content \n'{}'",
                 localConnection, ContentHelper.toStream(response).asString())
-          } else {
-            response = wsHandler.createBadRequestResponse()
           }
-        } else {
+        }
+        if(response == null) { // only if websocket handling was not done
           response = client.send(inBuffer)
           LOG.trace("Successful forwarded: '{}' (to {})", stream.asString(), client.connection())
           val responseStream = ContentHelper.toStream(response)

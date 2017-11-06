@@ -1,6 +1,7 @@
 package de.mirb.pg.socks
 
 import de.mirb.pg.util.ContentHelper
+import org.slf4j.LoggerFactory
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
@@ -33,6 +34,11 @@ class WebSocketHandler {
    */
 
   private var open = false
+  private val log = LoggerFactory.getLogger(this.javaClass.name)
+
+  init {
+    open = false
+  }
 
   fun isOpen(): Boolean {
     return open
@@ -60,6 +66,7 @@ class WebSocketHandler {
       response.put(len)
     } else {
       // TODO: do correct payload length calculation
+      log.error("Not yet implemented:: `correct payload length calculation`")
     }
     response.put(content)
     response.flip()

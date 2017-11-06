@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>WebSocket</title>
+</head>
+<script>
+  var ws = null;
+
+  function send() {
+    if(ws !== null) {
+//    const array = stringToUtf16ByteArray(content);
+      var content = document.getElementById("messageContent").value;
+      var blob = new Blob([content],{type: "text/plain"})
+//      var ab = new ArrayBuffer(array)
+      console.log("Data send: " + blob);
+      ws.send(blob)
+//      console.log("Data send: " + array);
+    }
+  }
+
+  function connect() {
+    //const WebSocket = require('ws');
+    var url = document.getElementById("wsurl").value;
+    ws = new WebSocket(url);
+    ws.binaryType = "blob";
+    ws.onopen = function open() {
+//      for (var i = 0; i < array.length; ++i) {
+//        array[i] = i / 2;
+//      }
+      console.log("WebSocket opened");
+      document.getElementById("sendbutton").disabled = false;
+    };
+
+    ws.onmessage = function (message) {
+//      console.log("Message received: " + typeof message)
+      console.log("Message received, datatype: " + typeof message.data)
+
+      if (typeof message.data !== 'string') {
+        // `message` is either a `Buffer` or an `ArrayBuffer`.
+        console.log("Binary message received: " + message.data)
+        var reader = new FileReader();
+        reader.onload = function () {
+          addListItem(reader.result);
+        };
+        reader.readAsText(message.data)
+      } else {
+        console.log("Text message received: " + message.data)
+        addListItem(message.data);
+      }
+//      var fileReader = new window.FileReader();
+//      var text = fileReader.readAsArrayBuffer(message.data[0])
+//      console.log("Message received: " + message.data)
+    }
+  }
+
+  function addListItem(itemText) {
+    var list = document.getElementById("list");
+    var li = document.createElement("li");
+    var pre = document.createElement("pre");
+    pre.innerHTML = itemText;
+    li.appendChild(pre);
+    list.insertBefore(li, list.childNodes[0]);
+  }
+
+  function stringToUtf16ByteArray(str) {
+    var bytes = [];
+    //currently the function returns without BOM. Uncomment the next line to change that.
+    //bytes.push(254, 255);  //Big Endian Byte Order Marks
+    for (var i = 0; i < str.length; ++i)
+    {
+      var charCode = str.charCodeAt(i);
+      //char > 2 bytes is impossible since charCodeAt can only return 2 bytes
+      bytes.push((charCode & 0xFF00) >>> 8);  //high byte (might be 0)
+      bytes.push(charCode & 0xFF);  //low byte
+    }
+    return bytes;
+  }
+
+//  function sample() {
+//    //const WebSocket = require('ws');
+//
+//    const ws = new WebSocket('ws://127.0.0.1:8080');
+//    ws.binaryType = "blob";
+//    ws.onopen = function open() {
+//      const array = new Float32Array(5);
+//
+//      for (var i = 0; i < array.length; ++i) {
+//        array[i] = i / 2;
+//      }
+//      console.log(array);
+//      ws.send(array);
+//    };
+//  }
+
+</script>
+
+<body>
+<h1>Sample for WebSocket</h1>
+<div>
+  <div>
+    Connect to: <input type="text" id="wsurl" value="ws://localhost:19381" maxlength="100" />
+    <!--<input type="submit" value="Submit" />-->
+    <button onclick="connect()">Connect</button>
+  </div>
+  <div>
+    Message: <input type="text" id="messageContent" value="™¡£¢∞" maxlength="100" />
+    <!--<input type="submit" value="Submit" />-->
+    <button id="sendbutton" disabled="true" onclick="send()">Publish</button>
+  </div>
+  <br/>
+  <div id="messages">
+    Received Messages:
+    <ul id="list"></ul>
+  </div>
+</div>
+
+</body></html>
