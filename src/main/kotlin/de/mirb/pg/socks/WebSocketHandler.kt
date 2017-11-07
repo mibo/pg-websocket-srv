@@ -6,6 +6,7 @@ import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 import java.util.*
+import kotlin.experimental.or
 import kotlin.experimental.xor
 
 class WebSocketHandler {
@@ -61,9 +62,15 @@ class WebSocketHandler {
     }
     response.put(firstByte.toByteArray())
     //
-    if(content.limit() < 124) {
-      val len = content.limit().toByte()
-      response.put(len)
+    val contentLength = content.limit()
+    if(contentLength < 124) {
+      val secondByte = contentLength.toByte()
+      response.put(secondByte)
+    } else if (contentLength <= 65535) {
+        val secondByte = (contentLength.toByte() or 0x7E)
+        response.put(secondByte)
+        response.put((contentLength shr 8).toByte())
+        response.put(contentLength.toByte())
     } else {
       // TODO: do correct payload length calculation
       log.error("Not yet implemented:: `correct payload length calculation`")
@@ -159,6 +166,7 @@ class WebSocketHandler {
   }
 
   private val SEC_WS_KEY_HEADER = "Sec-WebSocket-Key"
+  private val SEC_WS_PROTOCOL_HEADER = "Sec-WebSocket-Protocol"
   private val HTTP_400_BAD_REQUEST_STATUS = "HTTP/1.1 400 Bad Request"
 
   fun createWebSocketResponse(stream: ContentHelper.Stream, flagAsOpen: Boolean = true): ByteBuffer {
@@ -169,11 +177,26 @@ class WebSocketHandler {
     if(secWebSocketKey == null) {
       return ByteBuffer.wrap(HTTP_400_BAD_REQUEST_STATUS.toByteArray())
     }
+//    val secWebSocketProtocol = lines.singleOrNull { l -> l.startsWith(SEC_WS_PROTOCOL_HEADER) }
+//    val responseProtocol = if(secWebSocketProtocol == null) {
+//      ""
+//    } else {
+//      val protocol = secWebSocketProtocol.substring(SEC_WS_PROTOCOL_HEADER.length+1).trim()
+//      SEC_WS_PROTOCOL_HEADER + ": " + protocol + EOL
+//    }
+    val secWebSocketProtocol = lines.singleOrNull { l -> l.startsWith(SEC_WS_PROTOCOL_HEADER) }
+    val responseProtocol = if(secWebSocketProtocol == null) {
+      ""
+    } else { // if send, just bounce (no validation)
+      secWebSocketProtocol + EOL
+    }
+
     val value = secWebSocketKey.substring(SEC_WS_KEY_HEADER.length+1).trim() + WS_GUID
     val md = MessageDigest.getInstance("SHA1")
     val digest = md.digest(value.toByteArray(StandardCharsets.ISO_8859_1))
     val secWsAcceptValue = String(Base64.getEncoder().encode(digest))
-    val res = WS_RESPONSE_TEMPLATE.replace("<accept>", secWsAcceptValue)
+    val res = WS_RESPONSE_TEMPLATE.replace("{accept}", secWsAcceptValue)
+                                  .replace("{ws-protocol}", responseProtocol)
     val tmp = res.toByteArray(StandardCharsets.US_ASCII)
     return ByteBuffer.wrap(tmp)
   }
@@ -187,7 +210,8 @@ class WebSocketHandler {
                   "Connection: Upgrade" + EOL +
                   "Upgrade: websocket" + EOL +
                   "Sec-WebSocket-Version: 13" + EOL +
-                  "Sec-WebSocket-Accept: <accept>" + EOL + EOL
+                  "{ws-protocol}" +
+                  "Sec-WebSocket-Accept: {accept}" + EOL + EOL
 
   fun createBadRequestResponse(): ByteBuffer {
     return ByteBuffer.wrap(HTTP_400_BAD_REQUEST_STATUS.toByteArray())
