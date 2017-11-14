@@ -63,11 +63,11 @@ class WebSocketHandler {
     response.put(firstByte.toByteArray())
     //
     val contentLength = content.limit()
-    if(contentLength < 124) {
+    if(contentLength < 126) {
       val secondByte = contentLength.toByte()
       response.put(secondByte)
     } else if (contentLength <= 65535) {
-        val secondByte = (contentLength.toByte() or 0x7E)
+        val secondByte = 0x7E.toByte()
         response.put(secondByte)
         response.put((contentLength shr 8).toByte())
         response.put(contentLength.toByte())
@@ -142,9 +142,12 @@ class WebSocketHandler {
     }
     if(len == 126) {
       nextPos = 4
+      len = content.remaining() - if(mask) 8 else 4
       // TODO: fix extended payload len
     } else if(len == 127) {
       nextPos = 10
+      len = content.remaining()
+      len -= if(mask) 14 else 4
       // TODO: fix extended payload len
     }
     return PayloadInfo(mask, len, nextPos)

@@ -1,6 +1,7 @@
 package de.mirb.pg.socks
 
 import de.mirb.pg.util.ContentHelper
+import de.mirb.pg.util.ContentHelper.asString
 import org.slf4j.LoggerFactory
 import java.nio.ByteBuffer
 import java.nio.channels.SocketChannel
@@ -16,9 +17,9 @@ class SocketForwardHandler(
   private val sleepInMs = 200L
   private val daemonMode: Boolean = timeoutSeconds < 0
   private var run = true
-  private val wsHandler = if(webSocketSupportEnabled) { WebSocketHandler() } else { null }
 
   override fun start(socket: SocketChannel) {
+    val wsHandler = if(webSocketSupportEnabled) { WebSocketHandler() } else { null }
     val localConnection = socket.localAddress
     val remoteConnection = socket.remoteAddress
 //    socket.configureBlocking(false)
@@ -30,7 +31,7 @@ class SocketForwardHandler(
     run = true
 
     val client = SocketChannelClient(host, port, false)
-    LOG.trace("Forward client created for '{}'...", client.connection())
+    LOG.trace("Forward client created for '{}'->'{}'...", remoteConnection, client.connection())
 
     var emptyCounter = TimeUnit.SECONDS.toMillis(timeoutSeconds) / sleepInMs
     val inBuffer = ByteBuffer.allocate(1024)
@@ -41,6 +42,7 @@ class SocketForwardHandler(
       if(amount == -1) {
         // EOF
         LOG.trace("Received EOF.")
+        close(socket, client, wsHandler)
         run = false
       } else if(amount == 0) {
         if(!daemonMode && emptyCounter-- <= 0L) {
@@ -54,17 +56,19 @@ class SocketForwardHandler(
         LOG.trace("Received '{}' bytes of data", amount)
         inBuffer.flip()
         val stream = ContentHelper.toStream(inBuffer)
-        LOG.trace("Received: '{}'; start forward to {}", stream.asString(), client.connection())
+        LOG.debug("Received [{}bytes]: '{}'; start forward to {}", stream.stringSize(), stream.asString(), client.connection())
         var response: ByteBuffer? = null
         if(wsHandler != null) {
           if(wsHandler.isOpen()) {
             val inContent = wsHandler.unwrap(inBuffer)
+            val inStream = ContentHelper.toStream(inContent.content)
             val fwdResponse = client.send(inContent.content)
+            val fwdStream = ContentHelper.toStream(fwdResponse)
             response = wsHandler.wrap(inContent.binary, fwdResponse)
-            LOG.trace("Successful forwarded: '{}' (to {})", ContentHelper.asString(inContent.content), client.connection())
-            LOG.trace("Got response (from: {}): {}", client.connection(), ContentHelper.asString(fwdResponse))
-            LOG.trace("Wrapped response (content='{}' from forward connection {}) and write back to connection ({})",
-                    ContentHelper.asString(response), client.connection(), localConnection)
+            LOG.trace("Successful forwarded: '{}' (to {})", inStream.asString(), client.connection())
+            LOG.trace("Got response (from: {}): {}", client.connection(), fwdStream.asString())
+            LOG.debug("Wrapped response (bytes={}; content='{}' from forward connection {}) and write back to connection ({})",
+                    response.remaining(), asString(response), client.connection(), localConnection)
           } else if(wsHandler.isWebSocketRequest(stream)) {
             LOG.trace("Received web socket upgrade request '{}'", localConnection)
             response = wsHandler.createWebSocketResponse(stream)
@@ -89,8 +93,12 @@ class SocketForwardHandler(
     }
 
     LOG.info("Close channels/client/socket for forward handler")
+    close(socket, client, wsHandler)
 //    inChannel.close()
 //    outChannel.close()
+  }
+
+  private fun close(socket: SocketChannel, client: SocketChannelClient, wsHandler: WebSocketHandler?) {
     socket.close()
     client.close()
     wsHandler?.close()

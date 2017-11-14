@@ -9,13 +9,13 @@ import java.nio.channels.SocketChannel
 
 class SocketChannelClient(private val host: String, private val port: Int, private val blocking: Boolean = true): SocketClient {
   private val BUFFER_CAP = 1024 * 64
-  private val LOG = LoggerFactory.getLogger(this.javaClass.name)
+  private val log = LoggerFactory.getLogger(this.javaClass.name)
   private val socket = SocketChannel.open()
 
   init {
     socket.configureBlocking(blocking)
     socket.connect(InetSocketAddress(host, port))
-    LOG.trace("Connected to '{}:{}' (with blocking={};).", host, port, blocking)
+    log.debug("Connected to '{}:{}' (with blocking={};).", host, port, blocking)
   }
 
   override fun connection(): String {
@@ -28,46 +28,47 @@ class SocketChannelClient(private val host: String, private val port: Int, priva
 
   override fun send(content: ByteBuffer): ByteBuffer {
     try {
-      while(!socket.finishConnect()){
+      while(!socket.finishConnect()) {
         // wait for connection finished
-        LOG.trace("Wait (blocking) for connection finished (to {}:{})...", host, port)
+        log.trace("Wait (blocking) for connection finished (to {}:{})...", host, port)
         Thread.sleep(50)
       }
-      LOG.trace("Send {} bytes of data", content.limit())
+      log.trace("Send {} bytes of data", content.limit())
       socket.write(content)
 
-      LOG.debug("Wait (blocking) for response (from {}:{})...", host, port)
+      log.debug("Wait (blocking) for response (from {}:{})...", host, port)
 
       val read = ByteBuffer.allocate(BUFFER_CAP)
       var receivedBytesCount = socket.read(read)
       if(receivedBytesCount == 0) {
         // do one re-read after a short sleep
-        LOG.trace("Re-read (from {}:{})...", host, port)
+        log.trace("Re-read (from {}:{})...", host, port)
         Thread.sleep(100)
         receivedBytesCount = socket.read(read)
       }
 
       when {
-        receivedBytesCount < 0 -> // EOF
-          LOG.trace("Received EOF. Closing socket.")
+        receivedBytesCount < 0 -> {// EOF
+          log.trace("Received EOF. Closing socket.")
+          close()
+        }
         receivedBytesCount == 0 -> // no data
-          LOG.trace("Received no data. Closing socket.")
+          log.trace("Received no data. Closing socket.")
         else ->
-          LOG.trace("Received {} bytes with content: {}", receivedBytesCount, ContentHelper.toStream(read).asString())
+          log.trace("Received {} bytes with content: {}", receivedBytesCount, ContentHelper.toStream(read).asString())
       }
 
       read.flip()
       return read
     } catch (e: IOException) {
-      e.printStackTrace()
-      LOG.error("Exception occurred: " + e.message, e)
+      log.error("Exception occurred: " + e.message, e)
       close()
       return ByteBuffer.allocate(0)
     }
   }
 
   fun close() {
-    LOG.info("Close channels and socket.")
+    log.info("Close channels and socket.")
     socket.close()
   }
 }

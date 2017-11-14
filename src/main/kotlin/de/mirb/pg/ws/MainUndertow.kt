@@ -42,18 +42,23 @@ class MainUndertow {
           val stream = ContentHelper.toStream(inBuffer)
           val client = grantForwardSocket()
           log.trace("Received binary content='{}'.", stream.asString())
-          log.trace("Received: '{}'; start forward to {}", stream.asString(), client.connection())
+          log.debug("Received: '{}'; start forward to {}", stream.asString(), client.connection())
           val response = client.send(inBuffer)
           log.trace("Successful forwarded: '{}' (to {})", stream.asString(), client.connection())
           val responseStream = ContentHelper.toStream(response)
           log.trace("Got response (from: {}): {}", client.connection(), responseStream.asString())
 //          log.trace("Write response from forward connection ({}) back.", client.connection())
           //
-          channel?.peerConnections?.forEach {
-            log.trace("Write response from forward connection ({}) back.", client.connection())
-            WebSockets.sendBinary(response, it, null, 2000)
-//            WebSockets.sendBinaryBlocking(response, it)
-          }
+          log.trace("Handle main channel {}", channel)
+
+          log.debug("Write response from forward connection ({}) => '{}'.", client.connection(), channel?.peerAddress)
+          WebSockets.sendBinary(response, channel, null, 2000)
+//          log.trace("Handle {} connected peers ({})", channel?.peerConnections?.size, channel?.peerConnections)
+//          channel?.peerConnections?.distinct()?.forEach {
+//            log.trace("Write response from forward connection ({}) back to '{}'.", client.connection(), it.destinationAddress)
+//            WebSockets.sendBinary(response, it, null, 2000)
+////            WebSockets.sendBinaryBlocking(response, it)
+//          }
         }
         override fun onFullTextMessage(channel: WebSocketChannel?, message: BufferedTextMessage?) {
           val messageData = message?.data
@@ -70,11 +75,11 @@ class MainUndertow {
     val server = Undertow.builder()
         .addHttpListener(8080, "localhost")
         .setHandler(Handlers.path()
-            .addPrefixPath("/", { exchange ->
+            .addPrefixPath("/http", { exchange ->
               exchange.responseHeaders.put(Headers.CONTENT_TYPE, "text/plain")
               exchange.responseSender.send("Hello WS World (=> ws://host:port/ws)")
             })
-            .addPrefixPath("/ws", wsHandler))
+            .addPrefixPath("/", wsHandler))
         .build()
     server.start()
   }
@@ -83,8 +88,16 @@ class MainUndertow {
 //  private var client: SocketChannelClient = SocketChannelClient("localhost", 35672, false)
   private var client: SocketChannelClient? = null
   private fun grantForwardSocket(): SocketChannelClient {
-    if(client?.isClosed() != false) {
+    if(client?.isClosed() == true) {
+      log.trace("Re-create closed client.")
       client = SocketChannelClient("localhost", 35672, false)
+    }
+//    val msg = when(client == null) "": ""
+    if(client == null) {
+      log.trace("Create new client")
+      client = SocketChannelClient("localhost", 35672, false)
+    } else {
+      log.trace("Re-use existing client")
     }
     return client ?: SocketChannelClient("localhost", 35672, false)
   }

@@ -15,6 +15,13 @@ class MainWs {
     Javalin.create().apply {
       port(7070)
       enableStaticFiles("/public")
+      post("/post",  { context ->
+        LOG.info("POST headers = {}", context.headerMap())
+//        LOG.info("POST body = '{}'", context.request().inputStreamody())
+        LOG.info("POST body = '{}'", context.body())
+
+        context.response().outputStream.write(context.bodyAsBytes())
+      })
       ws("/ws") { ws ->
         ws.onConnect { session ->
           LOG.info("OnConnect -> remote={}", session.remoteAddress)

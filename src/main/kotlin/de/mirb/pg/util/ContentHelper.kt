@@ -93,10 +93,18 @@ object ContentHelper {
     fun linesCount(): Int {
       return ContentHelper.countLines(asString(), "\r\n")
     }
+
+    fun stringSize(charset: Charset = StandardCharsets.UTF_8): Int {
+      return asString(charset).length
+    }
   }
 
   fun asString(buffer: ByteBuffer, charset: Charset = StandardCharsets.UTF_8): String {
     return ContentHelper.toStream(buffer).asString(charset)
+  }
+
+  fun stringSize(buffer: ByteBuffer, charset: Charset = StandardCharsets.UTF_8): Int {
+    return ContentHelper.toStream(buffer).stringSize(charset)
   }
 
   @Throws(IOException::class)
